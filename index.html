@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interact with custom AI chatbot personas, such as a therapist, coach, or celebrity, for entertainment, education, or support. Get personalized guidance, advice, or simply have fun conversing with your favorite persona.">
+  <meta property="og:title" content="PersonaChat">
+  <meta property="og:description" content="Interact with custom AI chatbot personas, such as a therapist, coach, or celebrity, for entertainment, education, or support. Get personalized guidance, advice, or simply have fun conversing with your favorite persona.">
+  <title>PersonaChat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0b; color: #e4e4e7; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .container { max-width: 800px; width: 100%; padding: 24px; margin: 0 auto; }
+    h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 8px; 
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #a1a1aa; font-size: 1.1rem; margin-bottom: 32px; }
+    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px; padding: 24px; margin-bottom: 16px; backdrop-filter: blur(10px); }
+    button { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white;
+      border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem;
+      cursor: pointer; transition: all 0.2s; font-weight: 500; }
+    button:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(59,130,246,0.4); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    input, textarea, select { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
+      color: #e4e4e7; padding: 12px 16px; border-radius: 8px; font-size: 1rem; width: 100%;
+      outline: none; transition: border-color 0.2s; }
+    input:focus, textarea:focus { border-color: #3b82f6; }
+    .footer { margin-top: auto; padding: 24px; text-align: center; color: #52525b; font-size: 0.85rem; }
+    .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%; border-top-color: #3b82f6; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 640px) { .container { padding: 16px; } h1 { font-size: 1.8rem; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PersonaChat</h1>
+    <p class="subtitle">Interact with custom AI chatbot personas, such as a therapist, coach, or celebrity, for entertainment, education, or support.</p>
+  </header>
+  <main class="container">
+    <div class="card">
+      <h2>Persona Selection</h2>
+      <select id="persona-select">
+        <option value="therapist">Therapist</option>
+        <option value="coach">Coach</option>
+        <option value="celebrity">Celebrity</option>
+      </select>
+    </div>
+    <div class="card">
+      <h2>Conversation</h2>
+      <textarea id="conversation-input" placeholder="Type your message..."></textarea>
+      <button id="send-button" onclick="sendMessage()">Send</button>
+      <button id="voice-button" onclick="startVoiceInput()">Voice Input</button>
+      <div id="conversation-output"></div>
+    </div>
+  </main>
+  <footer class="footer">
+    Built with ❤️ by AI App Factory
+  </footer>
+  <script>
+    let conversationOutput = document.getElementById('conversation-output');
+    let sendButton = document.getElementById('send-button');
+    let voiceButton = document.getElementById('voice-button');
+    let conversationInput = document.getElementById('conversation-input');
+    let personaSelect = document.getElementById('persona-select');
+    let recognition = null;
+
+    async function sendMessage() {
+      sendButton.disabled = true;
+      let userInput = conversationInput.value;
+      conversationInput.value = '';
+      let persona = personaSelect.value;
+      let response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userInput, persona: persona })
+      });
+      let data = await response.json();
+      if (response.ok) {
+        conversationOutput.innerHTML += `<p>You: ${userInput}</p><p>AI: ${data.result}</p>`;
+      } else {
+        conversationOutput.innerHTML += `<p>Error: ${data.error}</p>`;
+      }
+      sendButton.disabled = false;
+    }
+
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window)) {
+        conversationOutput.innerHTML += '<p>Speech recognition not supported</p>';
+        return;
+      }
+      recognition = new webkitSpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.maxResults = 10;
+      recognition.onresult = event => {
+        let transcript = event.results[0][0].transcript;
+        conversationInput.value = transcript;
+        sendMessage();
+      };
+      recognition.onerror = event => {
+        conversationOutput.innerHTML += `<p>Error: ${event.error}</p>`;
+      };
+      recognition.onstart = () => {
+        conversationOutput.innerHTML += '<p>Listening...</p>';
+      };
+      recognition.onend = () => {
+        conversationOutput.innerHTML += '<p>Finished listening</p>';
+      };
+      recognition.start();
+    }
+  </script>
+</body>
+</html>
